@@ -266,9 +266,48 @@ order by players_visits.count desc
     );
 
 select *
-from visits
+from visits;
 
 --9 Создание тригеров
 
+INSERT INTO Campaign(campaign_id, campaign_name, is_done, story_book) values (6, 'Welcome Game', FALSE, 'sorry, we will just talk');
+
 --Первый тригер :
+
+
+drop function if exists hello();
+create function hello() returns trigger as $$
+begin
+    insert into Session(session_id, campaign_id, game_date, session_num)
+    values (
+            (
+            select max(s.session_id) + 1
+            from session s
+            ),
+            6,
+            now()::date,
+            (
+                select coalesce(max(session_num) + 1, 1)
+                from session
+                where campaign_id = 6
+                )
+           );
+
+    insert into character_in_session(CHAR_ID, SESSION_ID, IS_NPC)
+    values (
+            (
+                select max(chr.char_id) + 1
+                from character chr
+            ),(
+            select max(s.session_id)
+            from session s
+            ),
+            FALSE
+           );
+
+    return new;
+end;
+$$ language plpgsql;
+
+Create trigger hello_character after insert on Character for row execute procedure hello();
 
